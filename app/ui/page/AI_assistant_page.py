@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from config import COLORS, FONTS
 
 def qfont(font_tuple):
+    """Hàm tiện ích để tạo QFont từ tuple cấu hình trong file config."""
     family = font_tuple[0]
     size = font_tuple[1]
     weight = QFont.Bold if len(font_tuple) > 2 and font_tuple[2] == "bold" else QFont.Normal
@@ -16,6 +17,7 @@ def qfont(font_tuple):
     return f
 
 class AIAssistantPage(QFrame):
+    """Trang trợ lý AI cung cấp giao diện chat và các công cụ hỗ trợ học tập thông minh."""
     TOOLS = [
         ("🧮", "#FEF3C7", "Giải toán",           "Giải bài tập, chứng minh"),
         ("📄", "#DCFCE7", "Tóm tắt tài liệu",    "Tóm tắt nhanh nội dung"),
@@ -87,6 +89,7 @@ class AIAssistantPage(QFrame):
         self.create_right_panel()
 
     def make_card(self):
+        """Tạo khung thẻ (Card) với viền và bo góc dùng cho các phần tử trong trang chat."""
         card = QFrame()
         card.setObjectName("chat_card")
         card.setStyleSheet(f"""
@@ -99,6 +102,7 @@ class AIAssistantPage(QFrame):
         return card
 
     def create_header(self):
+        """Tạo phần đầu trang với tiêu đề và các nút chức năng nhanh (Lịch sử, Ghi chú, Chat mới)."""
         header = QFrame()
         h_layout = QHBoxLayout(header)
         h_layout.setContentsMargins(0, 0, 0, 0)
@@ -165,6 +169,7 @@ class AIAssistantPage(QFrame):
         self.left_layout.addWidget(header)
 
     def create_quick_prompts(self):
+        """Tạo thanh chứa các câu lệnh gợi ý nhanh (Chips) để người dùng chọn nhanh."""
         card = self.make_card()
         c_layout = QVBoxLayout(card)
         c_layout.setContentsMargins(15, 10, 15, 10)
@@ -219,6 +224,7 @@ class AIAssistantPage(QFrame):
         self.left_layout.addWidget(card)
 
     def create_chat_area(self):
+        """Tạo vùng hiển thị nội dung hội thoại (Scroll Area)."""
         self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
         self.chat_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; } QScrollBar:vertical { width: 8px; background: transparent; } QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 4px; }")
@@ -257,6 +263,7 @@ class AIAssistantPage(QFrame):
         )
 
     def add_user_message(self, text, timestamp="", attachment=None):
+        """Thêm một bong bóng tin nhắn của người dùng vào giao diện chat."""
         wrapper = QFrame()
         w_layout = QHBoxLayout(wrapper)
         w_layout.setContentsMargins(0, 0, 0, 0)
@@ -333,6 +340,7 @@ class AIAssistantPage(QFrame):
         self.chat_area_layout.addWidget(wrapper)
 
     def add_ai_message(self, text, timestamp=""):
+        """Thêm một bong bóng tin nhắn của AI vào giao diện chat."""
         wrapper = QFrame()
         w_layout = QHBoxLayout(wrapper)
         w_layout.setContentsMargins(0, 0, 0, 0)
@@ -404,6 +412,7 @@ class AIAssistantPage(QFrame):
         self.chat_area_layout.addWidget(wrapper)
 
     def create_input_box(self):
+        """Tạo khu vực nhập liệu tin nhắn (Text Edit) và các nút công cụ đính kèm."""
         container = QFrame()
         container.setObjectName("input_card")
         container.setStyleSheet(f"""
@@ -495,6 +504,7 @@ class AIAssistantPage(QFrame):
         self.left_layout.addWidget(disclaimer)
 
     def create_right_panel(self):
+        """Tạo cột bên phải hiển thị Lịch sử hội thoại và Gợi ý học tập hôm nay."""
         # Card Lịch sử hội thoại
         hist_card = self.make_card()
         h_layout = QVBoxLayout(hist_card)

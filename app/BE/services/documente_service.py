@@ -1,6 +1,7 @@
 # app/BE/services/exam_service.py
 
-class ExamService:
+class DocumenteService:
+    """Dịch vụ quản lý dữ liệu cho Trang tài liệu: Danh sách đề thi, Thống kê và Danh mục phổ biến."""
     def __init__(self):
         # Dữ liệu mẫu – sau này thay bằng lời gọi Supabase/Google Drive
         self.exams = [

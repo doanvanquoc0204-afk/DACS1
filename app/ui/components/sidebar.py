@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from config import COLORS, FONTS
 
 class Sidebar(QFrame):
+    """Thanh menu bên trái (Sidebar) điều hướng chính cho toàn bộ ứng dụng."""
     def __init__(self, on_navigate=None, parent=None):
         super().__init__(parent)
         self.on_navigate = on_navigate
@@ -151,11 +152,13 @@ class Sidebar(QFrame):
         main_layout.addWidget(profile_container)
 
     def _on_btn_click(self, page_name):
+        """Xử lý sự kiện khi người dùng click vào một mục trên menu."""
         self.set_active_page(page_name)
         if self.on_navigate:
             self.on_navigate(page_name)
 
     def set_active_page(self, page_name):
+        """Cập nhật trạng thái Highlight cho nút tương ứng với trang đang hiển thị."""
         for name, btn in self.nav_buttons.items():
             if name == page_name:
                 btn.setStyleSheet(f"""

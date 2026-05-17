@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from config import COLORS, FONTS
 
 def qfont(font_tuple):
+    """Hàm tiện ích để tạo QFont từ tuple cấu hình trong file config."""
     family = font_tuple[0]
     size = font_tuple[1]
     weight = QFont.Bold if len(font_tuple) > 2 and font_tuple[2] == "bold" else QFont.Normal
@@ -16,7 +17,7 @@ def qfont(font_tuple):
     return f
 
 class ArrowComboBox(QComboBox):
-    """QComboBox tự vẽ mũi tên ▼ bằng text — không cần ảnh."""
+    """QComboBox tùy chỉnh, tự vẽ mũi tên ▼ bằng văn bản thay vì dùng ảnh, giúp giao diện nhẹ và đồng bộ."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setItemDelegate(QStyledItemDelegate())
@@ -34,10 +35,11 @@ class ArrowComboBox(QComboBox):
         painter.drawText(arrow_rect, Qt.AlignVCenter | Qt.AlignHCenter, "▼")
         painter.end()
 
-class ExamQuestionPage(QFrame):
-    def __init__(self, master, exam_service):
+class DocumentPage(QFrame):
+    """Trang quản lý tài liệu và đề thi, cho phép tìm kiếm, xem và tải xuống."""
+    def __init__(self, master, documente_service):
         super().__init__(master)
-        self.exam_service = exam_service
+        self.documente_service = documente_service
         
         self.setStyleSheet(f"background-color: {COLORS['bg']};")
         
@@ -78,6 +80,7 @@ class ExamQuestionPage(QFrame):
         self.create_right_panel()
 
     def make_card(self):
+        """Tạo một QFrame với kiểu dáng thẻ (bo góc, viền xám) dùng cho các mục đề thi."""
         card = QFrame()
         card.setObjectName("exam_card")
         card.setStyleSheet(f"""
@@ -90,6 +93,7 @@ class ExamQuestionPage(QFrame):
         return card
 
     def create_header(self):
+        """Tạo phần tiêu đề trang và các nút chức năng (Upload, Refresh)."""
         header = QFrame()
         h_layout = QHBoxLayout(header)
         h_layout.setContentsMargins(0, 0, 0, 0)
@@ -151,6 +155,7 @@ class ExamQuestionPage(QFrame):
         self.left_layout.addWidget(header)
 
     def create_search_bar(self):
+        """Tạo thanh tìm kiếm kết hợp các bộ lọc (Môn học, Lớp)."""
         bar = self.make_card()
         b_layout = QHBoxLayout(bar)
         b_layout.setContentsMargins(15, 12, 15, 12)
@@ -228,7 +233,8 @@ class ExamQuestionPage(QFrame):
         self.left_layout.addWidget(bar)
 
     def create_stats(self):
-        stats = self.exam_service.get_stats()
+        """Tạo hàng hiển thị các con số thống kê tổng quan về tài liệu."""
+        stats = self.documente_service.get_stats()
         stats_data = [
             ("📋", str(stats["total"]), "Tổng đề thi", COLORS["primary"], "#DCF0FF"),
             ("📄", str(stats["pdf_count"]), "PDF", "#E74C3C", "#FDDEDE"),
@@ -273,8 +279,9 @@ class ExamQuestionPage(QFrame):
         self.left_layout.addWidget(stats_row)
 
     def create_exam_list(self):
-        exams = self.exam_service.get_exams()
-        total_exams = self.exam_service.get_stats()['total']
+        """Hiển thị danh sách các đề thi dưới dạng các thẻ (Card)."""
+        exams = self.documente_service.get_exams()
+        total_exams = self.documente_service.get_stats()['total']
         
         hdr = QFrame()
         h_layout = QHBoxLayout(hdr)
@@ -419,6 +426,7 @@ class ExamQuestionPage(QFrame):
             self.left_layout.addWidget(card)
             
     def create_right_panel(self):
+        """Tạo cột bên phải bao gồm khu vực tải lên và các danh mục phổ biến."""
         # Card Upload
         up_card = self.make_card()
         up_layout = QVBoxLayout(up_card)
@@ -504,7 +512,7 @@ class ExamQuestionPage(QFrame):
         cat_h_layout.addStretch()
         cat_layout.addWidget(cat_hdr)
         
-        popular_subjects = self.exam_service.get_popular_subjects()
+        popular_subjects = self.documente_service.get_popular_subjects()
         for subj, count in popular_subjects:
             row = QHBoxLayout()
             row.setContentsMargins(5, 4, 5, 4)

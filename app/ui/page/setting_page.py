@@ -10,11 +10,13 @@ from PySide6.QtCore import Qt, QRect, QPoint
 from config import COLORS, FONTS
 
 def get_font_style(font_tuple):
+    """Hàm tiện ích để tạo chuỗi style CSS cho Font dựa trên tuple cấu hình."""
     family, size, *weight = font_tuple
     w = "bold" if weight and weight[0] == "bold" else "normal"
     return f"font-family: '{family}'; font-size: {size}px; font-weight: {w};"
 
 class ToggleSwitch(QCheckBox):
+    """Nút gạt (Switch) tùy chỉnh theo phong cách iOS/Material Design."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(50, 28)
@@ -46,7 +48,7 @@ class ToggleSwitch(QCheckBox):
         painter.end()
 
 class ArrowComboBox(QComboBox):
-    """QComboBox tự vẽ mũi tên ▼ — không cần ảnh."""
+    """QComboBox tùy chỉnh tự vẽ mũi tên xuống, không cần sử dụng file ảnh bên ngoài."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setItemDelegate(QStyledItemDelegate())
@@ -70,6 +72,7 @@ class ArrowComboBox(QComboBox):
 #  HELPER
 # ═══════════════════════════════════════════════
 def create_card():
+    """Hàm tạo khung thẻ (Card) trắng có viền bo góc dùng cho các mục cài đặt."""
     card = QFrame()
     card.setStyleSheet(f"""
         QFrame {{
@@ -81,6 +84,7 @@ def create_card():
     return card
 
 def create_divider():
+    """Tạo đường kẻ ngang mỏng để phân tách các mục."""
     div = QFrame()
     div.setFixedHeight(1)
     div.setStyleSheet(f"background-color: {COLORS['border']}; border: none;")
@@ -90,6 +94,7 @@ def create_divider():
 #  MAIN PAGE
 # ═══════════════════════════════════════════════
 class SettingPage(QWidget):
+    """Trang cài đặt hệ thống: Thông tin tài khoản, Giao diện, Thông báo và Bảo mật."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet(f"background-color: {COLORS['bg']};")

@@ -1,4 +1,7 @@
+from datetime import datetime
 from PySide6.QtCore import Qt, QSize
+import datetime
+
 from PySide6.QtGui import QCursor, QFont
 from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QFrame, QGridLayout, QHBoxLayout,
@@ -7,6 +10,8 @@ from PySide6.QtWidgets import (
 )
 
 from config import COLORS, FONTS
+from ui.components.form_calender import AddScheduleDialog
+from ui.components.form_tasks import AddTaskDialog
 
 DAY_PALETTE = [
     ("#EEF2FF", "#4F46E5"),  # Thứ 2 - Indigo
@@ -26,13 +31,16 @@ PERIOD_INFO = {
 
 DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 
+# --- Helper Functions ---
 def get_period(start_str: str) -> str:
+    """Xác định buổi (Sáng, Chiều, Tối) dựa trên giờ bắt đầu."""
     h = int(start_str.split(":")[0])
     if h < 12:  return "Sáng"
     if h < 18:  return "Chiều"
     return "Tối"
 
 def qfont(font_tuple):
+    """Hàm tiện ích để tạo QFont từ tuple cấu hình trong file config."""
     family = font_tuple[0]
     size = font_tuple[1]
     weight = QFont.Bold if len(font_tuple) > 2 and font_tuple[2] == "bold" else QFont.Normal
@@ -40,12 +48,15 @@ def qfont(font_tuple):
     f.setWeight(weight)
     return f
 
-class CenterPanel(QFrame):
-    def __init__(self, master, study_service, ai_service):
+class HomePage(QFrame):
+    """Trang chủ hiển thị Tổng quan lịch học, nhiệm vụ và thông báo."""
+    def __init__(self, master, home_service, ai_service):
         super().__init__(master)
-        self.study_service = study_service
+        self.home_service = home_service
         self.ai_service = ai_service
-        self._selected_day = 0
+        # Tự động lấy thứ hiện tại để hiển thị lịch tương ứng
+        self._selected_day = datetime.datetime.now().weekday()
+        self.week_offset = 0  # 0 là tuần hiện tại, -1 là tuần trước, 1 là tuần sau
         self._day_buttons = []
         
         self.setStyleSheet(f"background-color: {COLORS['bg']};")
@@ -82,6 +93,7 @@ class CenterPanel(QFrame):
         right_layout.addStretch()
 
     def make_card(self):
+        """Tạo một QFrame với kiểu dáng thẻ (bo góc, viền xám) dùng chung."""
         card = QFrame()
         card.setObjectName("card_frame")
         card.setStyleSheet(f"""
@@ -94,6 +106,7 @@ class CenterPanel(QFrame):
         return card
 
     def create_header(self, parent_layout):
+        """Tạo phần tiêu đề trang bao gồm: Tên trang, nút chuyển tuần và nút thêm lịch."""
         header = QFrame()
         header.setStyleSheet("background: transparent;")
         h_layout = QHBoxLayout(header)
@@ -123,24 +136,17 @@ class CenterPanel(QFrame):
         btn_prev.setFixedSize(36, 36)
         btn_prev.setStyleSheet(btn_style)
         btn_prev.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_prev.clicked.connect(lambda: self.change_week(-1))
         h_layout.addWidget(btn_prev)
         
         btn_next = QPushButton(">")
         btn_next.setFixedSize(36, 36)
         btn_next.setStyleSheet(btn_style)
         btn_next.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_next.clicked.connect(lambda: self.change_week(1))
         h_layout.addWidget(btn_next)
         
-        date_lbl = QLabel("20 thg 4 – 26 thg 4, 2026")
-        date_lbl.setFont(qfont(FONTS["body_bold_center"]))
-        date_lbl.setStyleSheet(f"color: {COLORS['text_primary']}; margin: 0 10px;")
-        h_layout.addWidget(date_lbl)
-        
-        btn_today = QPushButton("Hôm nay")
-        btn_today.setFixedHeight(36)
-        btn_today.setStyleSheet(btn_style)
-        btn_today.setCursor(QCursor(Qt.PointingHandCursor))
-        h_layout.addWidget(btn_today)
+        # Đã xoá date_lbl và btn_today theo yêu cầu
         
         # Removed Segmented Button (Tuần / Tháng)
         
@@ -160,17 +166,25 @@ class CenterPanel(QFrame):
                 background-color: #357FE0;
             }}
         """)
+        self.add_schedule_btn = btn_add
+        self.add_schedule_btn.clicked.connect(self.open_add_schedule_dialog)
         h_layout.addWidget(btn_add)
         
         parent_layout.addWidget(header)
 
+    def open_add_schedule_dialog(self):
+        """Mở cửa sổ thêm lịch học mới."""
+        dialog = AddScheduleDialog(self.home_service, self)
+        dialog.exec()
+
     def create_week_bar(self, parent_layout):
+        """Tạo thanh chọn Thứ trong tuần (T2 -> CN)."""
         bar_outer = self.make_card()
         bar_layout = QHBoxLayout(bar_outer)
         bar_layout.setContentsMargins(10, 10, 10, 10)
         bar_layout.setSpacing(10)
         
-        schedule = self.study_service.get_schedule()
+        schedule = self.home_service.get_schedule()
         
         for i, label in enumerate(DAY_LABELS):
             if i < len(schedule):
@@ -191,11 +205,31 @@ class CenterPanel(QFrame):
         parent_layout.addWidget(bar_outer)
 
     def select_day(self, idx):
+        """Xử lý khi người dùng click chọn một ngày khác trên thanh tuần."""
         self._selected_day = idx
         self.refresh_day_styles()
         self.reload_schedule()
 
+    def change_week(self, delta):
+        """Thay đổi tuần hiển thị (tới hoặc lui)."""
+        self.week_offset += delta
+        self.update_week_ui()
+
+    def update_week_ui(self):
+        """Cập nhật lại ngày tháng hiển thị trên các nút Thứ sau khi đổi tuần."""
+        # Cập nhật lại text cho các nút trong week bar
+        schedule = self.home_service.get_schedule(self.week_offset)
+        for i, btn in enumerate(self._day_buttons):
+            if i < len(schedule):
+                label = DAY_LABELS[i]
+                date_part = schedule[i]["date"].split("/")
+                date_str  = f"{date_part[0]}/{date_part[1]}"
+                btn.setText(f"{label}\n{date_str}")
+        
+        self.reload_schedule()
+
     def refresh_day_styles(self):
+        """Cập nhật màu sắc (Highlight) cho nút Thứ đang được chọn."""
         for i, btn in enumerate(self._day_buttons):
             if i == self._selected_day:
                 btn.setStyleSheet(f"""
@@ -222,6 +256,7 @@ class CenterPanel(QFrame):
                 """)
 
     def create_schedule_list(self, parent_layout):
+        """Tạo vùng cuộn chứa danh sách các tiết học của ngày đang chọn."""
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setStyleSheet("QScrollArea { border: none; background: transparent; } QScrollBar:vertical { width: 8px; background: transparent; } QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 4px; }")
@@ -239,6 +274,7 @@ class CenterPanel(QFrame):
         self.reload_schedule()
 
     def reload_schedule(self):
+        """Làm mới danh sách tiết học (Xóa cũ, tải mới)."""
         # Clear layout
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)
@@ -260,7 +296,8 @@ class CenterPanel(QFrame):
                 self.clear_layout(item.layout())
 
     def load_day_schedule(self, day_idx):
-        schedule = self.study_service.get_schedule()
+        """Tải dữ liệu lịch học từ Service và hiển thị lên giao diện."""
+        schedule = self.home_service.get_schedule(self.week_offset)
         if day_idx >= len(schedule):
             lbl = QLabel("Không có lịch học")
             lbl.setFont(qfont(FONTS["body_center"]))
@@ -312,6 +349,7 @@ class CenterPanel(QFrame):
             self.scroll_layout.addWidget(lbl)
 
     def build_session_card(self, session, bg_day, accent):
+        """Xây dựng một thẻ hiển thị thông tin của một tiết học cụ thể."""
         card = self.make_card()
         card.setFixedHeight(95)
         
@@ -382,6 +420,7 @@ class CenterPanel(QFrame):
         self.scroll_layout.addWidget(card)
 
     def create_bottom_cards(self, parent_layout):
+        """Tạo phần dưới cùng bao gồm thẻ Gợi ý AI và thẻ Thống kê tuần."""
         bottom_layout = QHBoxLayout()
         bottom_layout.setSpacing(20)
         
@@ -450,7 +489,7 @@ class CenterPanel(QFrame):
         stat_h_layout.addStretch()
         stat_layout.addWidget(stat_header)
         
-        stats = self.study_service.get_stats()
+        stats = self.home_service.get_stats()
         
         stats_grid = QGridLayout()
         items = [
@@ -494,6 +533,7 @@ class CenterPanel(QFrame):
         parent_layout.addLayout(bottom_layout)
 
     def create_today_tasks(self, parent_layout):
+        """Tạo bảng danh sách các nhiệm vụ (To-do list) ở cột bên phải."""
         card = self.make_card()
         layout = QVBoxLayout(card)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -510,7 +550,7 @@ class CenterPanel(QFrame):
         hdr_layout.addStretch()
         layout.addWidget(hdr)
         
-        for task in self.study_service.get_tasks():
+        for task in self.home_service.get_tasks():
             t_row = QHBoxLayout()
             t_row.setSpacing(12)
             
@@ -553,7 +593,8 @@ class CenterPanel(QFrame):
             t_row.addLayout(info_layout, 1)
             layout.addLayout(t_row)
             
-        btn_all = QPushButton("Xem tất cả nhiệm vụ →")
+        footer_layout = QHBoxLayout()
+        btn_all = QPushButton("Xem tất cả")
         btn_all.setFixedHeight(36)
         btn_all.setFont(qfont(FONTS["body_bold_center"]))
         btn_all.setCursor(QCursor(Qt.PointingHandCursor))
@@ -568,10 +609,43 @@ class CenterPanel(QFrame):
                 color: #357FE0;
             }}
         """)
-        layout.addWidget(btn_all)
+        footer_layout.addWidget(btn_all)
+        
+        footer_layout.addStretch()
+        
+        btn_add = QPushButton("+ Thêm")
+        btn_add.setFixedSize(70, 28)
+        btn_add.setFont(qfont(FONTS["small_bold_center"]))
+        btn_add.setCursor(QCursor(Qt.PointingHandCursor))
+        btn_add.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['primary']};
+                color: white;
+                border-radius: 6px;
+                border: none;
+            }}
+            QPushButton:hover {{
+                background-color: #357FE0;
+            }}
+        """)
+        self.add_task_btn = btn_add
+        self.add_task_btn.clicked.connect(self.open_add_task_dialog)
+        footer_layout.addWidget(btn_add)
+        layout.addLayout(footer_layout)
+
         parent_layout.addWidget(card)
 
+    def open_add_task_dialog(self):
+        """Mở cửa sổ thêm nhiệm vụ mới."""
+        dialog = AddTaskDialog(self.home_service, self, on_task_created=self.on_task_created)
+        dialog.exec()
+
+    def on_task_created(self, task_data):
+        """Callback xử lý sau khi nhiệm vụ được tạo thành công."""
+        print("Task created callback:", task_data)
+
     def create_notifications(self, parent_layout):
+        """Tạo bảng danh sách các thông báo mới ở cột bên phải."""
         card = self.make_card()
         layout = QVBoxLayout(card)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -586,7 +660,7 @@ class CenterPanel(QFrame):
         title.setStyleSheet("color: white; border: none; background: transparent;")
         hdr_layout.addWidget(title)
         
-        nots = self.study_service.get_notifications()
+        nots = self.home_service.get_notifications()
         badge = QLabel(str(len(nots)))
         badge.setFont(qfont(FONTS["small_bold_center"]))
         badge.setAlignment(Qt.AlignCenter)
@@ -625,7 +699,7 @@ class CenterPanel(QFrame):
             row.addLayout(info_layout, 1)
             layout.addLayout(row)
             
-        btn_all = QPushButton("Xem tất cả thông báo →")
+        btn_all = QPushButton("Xem tất cả")
         btn_all.setFixedHeight(36)
         btn_all.setFont(qfont(FONTS["body_bold_center"]))
         btn_all.setCursor(QCursor(Qt.PointingHandCursor))

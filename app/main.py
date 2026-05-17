@@ -5,15 +5,15 @@ from PySide6.QtCore import Qt
 from ui.components.sidebar import Sidebar
 
 # Tạm thời comment các trang cũ do chưa convert xong
-from ui.page.center_panel import CenterPanel
+from ui.page.home_page import HomePage
 # Tạm thời comment các trang chưa convert sang PySide6 để tránh crash
-from ui.page.exam_question import ExamQuestionPage
-from ui.page.setting import SettingPage
-from ui.page.AI_assistant import AIAssistantPage
+from ui.page.document_page import DocumentPage
+from ui.page.setting_page import SettingPage
+from ui.page.AI_assistant_page import AIAssistantPage
 
 # Nhập các Service (Dịch vụ)
-from BE.services.study_service import StudyService
-from BE.services.exam_service import ExamService
+from BE.services.home_service import HomeService
+from BE.services.documente_service import DocumenteService
 from AI.chatbot.ai_service import AIService
 
 # ── Cấu hình màu sắc ─────────────────────────────────────────────────────────
@@ -32,8 +32,8 @@ class StudyAIApp(QMainWindow):
         self.setStyleSheet(f"QMainWindow {{ background-color: {COLORS['bg']}; }}")
 
         # Khởi tạo các Service
-        self.study_service = StudyService()
-        self.exam_service  = ExamService()
+        self.home_service = HomeService()
+        self.documente_service  = DocumenteService()
         self.ai_service    = AIService()
 
         # Widget chính
@@ -70,15 +70,15 @@ class StudyAIApp(QMainWindow):
         self.page_stack.addWidget(self.setting_page)
         self.pages["Cài đặt"] = self.setting_page
 
-        # Khởi tạo trang Tổng quan (Mới cập nhật)
-        self.center_panel = CenterPanel(self.page_stack, self.study_service, self.ai_service)
-        self.page_stack.addWidget(self.center_panel)
-        self.pages["Tổng quan"] = self.center_panel
+        # Khởi tạo các trang Tổng quan (Mới cập nhật)
+        self.home_page = HomePage(self.page_stack, self.home_service, self.ai_service)
+        self.page_stack.addWidget(self.home_page)
+        self.pages["Tổng quan"] = self.home_page
 
         # Khởi tạo trang Tài liệu (Đã convert)
-        self.exam_page = ExamQuestionPage(self.page_stack, self.exam_service)
-        self.page_stack.addWidget(self.exam_page)
-        self.pages["Tài liệu"] = self.exam_page
+        self.document_page = DocumentPage(self.page_stack, self.documente_service)
+        self.page_stack.addWidget(self.document_page)
+        self.pages["Tài liệu"] = self.document_page
 
         # Khởi tạo trang Trợ lý AI (Đã convert)
         self.ai_page = AIAssistantPage(self.page_stack, self.ai_service)
